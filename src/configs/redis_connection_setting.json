@@ -1,0 +1,9 @@
+{
+  "host": "172.28.0.3",
+  "port": 6379,
+  "redis_db_num": 0,
+  "key_hashing": null,
+  "use_connection_pool": true,
+  "ssl": false,
+  "password": ""
+}

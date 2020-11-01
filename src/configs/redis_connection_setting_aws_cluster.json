@@ -1,0 +1,12 @@
+{
+  "use_redis_cluster": true,
+  "startup_nodes":[
+      {"host" : "your-aws-redis-cluster-name-0001-001.xxxxxx.0001.yyyy.cache.amazonaws.com", "port" : 6379},
+      {"host" : "your-aws-redis-cluster-name-0001-001.xxxxxx.0001.yyyy.cache.amazonaws.com", "port" : 6379},
+      {"host" : "your-aws-redis-cluster-name-0001-003.xxxxxx.0001.yyyy.cache.amazonaws.com", "port" : 6379}
+  ],
+  "key_hashing": null,
+  "use_connection_pool": false,
+  "ssl": false,
+  "password": ""
+}

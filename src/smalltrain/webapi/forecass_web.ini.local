@@ -1,0 +1,8 @@
+[uwsgi]
+socket = /var/tmp/uwsgi/uwsgi.sock
+module = forecass_web:app
+chmod-socket = 660
+vacuum = true
+virtualenv = /Users/xxx/venv/venv_python3.6.4_20181124/
+logto = forecass_web.log
+
