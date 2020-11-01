@@ -1,0 +1,9 @@
+{
+  "host": "localhost",
+  "port": 6379,
+  "redis_db_num": 0,
+  "key_hashing": null,
+  "use_connection_pool": true,
+  "ssl": false,
+  "password": ""
+}

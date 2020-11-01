@@ -1,0 +1,10 @@
+[uwsgi]
+socket = /var/tmp/uwsgi/uwsgi.sock
+module = forecass_web:app
+chmod-socket = 660
+chown-socket = ec2-user:ec2-user
+uid = ec2-user
+gid = ec2-user
+vacuum = true
+virtualenv = /home/ec2-user/venv/venv_python3.6.0/
+logto = forecass_web.log

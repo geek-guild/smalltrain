@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<head>
+	<!--[if IE]>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<![endif]-->
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FORECASS</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.8.1/js/all.js" integrity="sha384-g5uSoOSBd7KkhAMlnQILrecXvzst9TdC09/VM+pjDTCM+1il8RHz5fKANTFFb+gQ" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
+    <script type="text/javascript" src="./js/i18next.min.js?update_20190403"></script>
+    <script type="text/javascript" src="./js/i18nextXHRBackend.min.js?update_20190403"></script>
+    <script type="text/javascript" src="./js/jquery-i18next.min.js?update_20190403"></script>
+    <script type="text/javascript" src="./js/i18nextBrowserLanguageDetector.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+    <script>
+        (function() {
+          'use strict';
+          i18next
+          .use(i18nextXHRBackend) // use locale setting json
+          .use(i18nextBrowserLanguageDetector) // use browser language setting
+          .init(
+          {
+            // lng: 'ja' // if force setting lang
+          }, function(err, t) {
+            jqueryI18next.init(i18next, $);
+            $("[data-i18n]").localize();
+          });
+        }());
+    </script>
+    <style type="text/css">
+
+/* about accordion {*/
+
+/* hidden input.accordion {*/
+input.accordion {
+    display: none;
+}
+
+/* hidden at init */
+.accordion-div .acshow {
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: 0.8s;
+}
+
+/* checked to show */
+.accordion:checked + .acshow {
+    height: auto;
+    padding: 5px;
+    background: #fafaff;
+    opacity: 1;
+}
+
+.with-tag-right {
+    float: left;
+    margin-right: 8px;
+}
+
+.is-horizontal-center {
+    display: flex;
+    margin: 0 auto;
+    justify-content: center;
+    vertical-align: middle;
+}
+
+.drop-file-area {
+    width: 400px;
+    padding: 100px;
+    background: #eee;
+    text-align: center;
+}
+
+.has-background-lightblue1 {
+    background-color: #66bbf0;
+}
+
+.has-background-lightblue2 {
+    background-color: #76B4F0;
+}
+
+.with-disabled-gray:disabled {
+    background-color: #aaaaaa !important;
+}
+
+.small-vsp {
+    height: 10px;
+}
+
+
+
+@keyframes spinner {
+  to {transform: rotate(360deg);}
+}
+
+.loading-spinner:before {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  margin-left: -10px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  border-top-color: #333;
+  animation: spinner .6s linear infinite;
+  z-index: 10000;
+
+}
+
+    </style>
+</head>
+<html>
+<body>
+
+    <section class="section">
+
+
+        <div class="container">
+
+
+            <nav id="navbar" class="navbar has-shadow is-spaced" role="navigation" aria-label="main navigation">
+            <div class="container">
+
+              <div class="navbar-brand">
+                <a class="navbar-item" href="./forecass_web.html">
+                    <figure class="image is-32x32 with-tag-right" style="vertical-align:middle;">
+                        <img src="img/forecass-icon.svg" alt="FORECASS">
+                    </figure>
+                    <h1 class="title">
+                        FORECASS
+                    </h1>
+                </a>
+
+                <div id="navbarBurger" class="navbar-burger burger" data-target="navMenuIndex">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+
+              <div id="navMenuIndex" class="navbar-menu">
+                <div class="navbar-start">
+                </div>
+                <div class="navbar-end">
+                  <div class="navbar-item">
+                    <div class="buttons">
+                      <a class="button is-light lang_to_set" data-lang="ja">
+                        Japanese
+                      </a>
+                    </div>
+                  </div>
+                  <div class="navbar-item">
+                    <div class="buttons">
+                      <a class="button is-light lang_to_set" data-lang="en">
+                        English
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </nav>
+
+            <form id="operation_read_form" method="POST">
+                <label class="label">train_id</label>
+                <div class="control">
+                    <input class="input" type="text" id="train_id" name="train_id" placeholder="Please input train_id" value="SR_1D_CNN_SAMPLE-TRAIN">
+                </div>
+                <div class="small-vsp">
+                </div>
+                <div class="field is-grouped">
+                  <div class="control">
+                    <button id="operation_read_submit" class="button is-link" data-i18n="operation_read_submit">Read</button>
+                  </div>
+                  <div class="control">
+                    <button id="prediction_submit" class="button is-link with-disabled-gray"  data-i18n="prediction_submit" disabled="true">Prediction</button>
+                  </div>
+                  <div class="control">
+                    <button id="cancel_submit" class="button is-text" disabled="true">Cancel</button>
+                  </div>
+                </div>
+
+            </form>
+            <div id="operation-body" disabled="true" style="display: none">
+
+                <div class="tabs">
+                    <ul class="tab-links">
+                        <li class="tab_li is-active" for="tabs_setting"><a href="#tabs_setting">Setting</a></li>
+                        <li class="tab_li" for="tabs_report"><a href="#tabs_report">Report</a></li>
+                        <li class="tab_li" for="tabs_history"><a href="#tabs_report">Train history</a></li>
+                        <li class="tab_li" for="tabs_prediction"><a href="#tabs_prediction">Manual Prediction</a></li>
+                    </ul>
+                </div>
+
+                <div class="tabs_contents">
+
+                    <div id="tabs_setting">
+                        <input type="checkbox" id="test_only_mode" name="test_only_mode" value="true" hidden="true" disabled>
+                        <div class="control">
+                          <label class="radio">
+                            <input type="radio" id="mode_train_predict" name="mode_train_predict" value='train' disabled>
+                            Train
+                          </label>
+                          <label class="radio">
+                            <input type="radio" id="mode_train_predict" name="mode_train_predict" value='predict' disabled>
+                            Predict
+                          </label>
+                        </div>
+
+
+                        <div class="accordion-div">
+                            <label class="message-header has-background-lightblue1 accordion" for="label_model_accordiion">Model<i class="accordion"></i></label>
+                            <input type="checkbox" id="label_model_accordiion" class="accordion"/>
+                            <div class="message-body acshow" id="setting_model">
+
+                                <label class="label">model_id
+                                <div class="select">
+                                  <select id="model_id" name="model_id" disabled>
+                                    <option value="1D_CNN">1D_CNN</option>
+                                  </select>
+                                </div></label>
+
+                                <label class="label">model_type
+                                <div class="select">
+                                  <select id="model_type" name="model_type" disabled>
+                                    <option value="REGRESSION">REGRESSION</option>
+                                    <option value="CLASSIFICATION">CLASSIFICATION</option>
+                                  </select>
+                                </div></label>
+
+                                <label class="label">has_batch_norm
+                                <input type="checkbox" id="has_batch_norm" name="has_batch_norm" value="true" disabled></label>
+
+                                <label class="label">bn_decay
+                                <div class="control">
+                                    <input class="input" type="text" id="bn_decay" name="bn_decay" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">bn_eps
+                                <div class="control">
+                                    <input class="input" type="text" id="bn_eps" name="bn_eps" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">input_ts_size
+                                <div class="control">
+                                    <input class="input" type="text" id="input_ts_size" name="input_ts_size" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">has_to_complement_before
+                                <input type="checkbox" id="has_to_complement_before" name="has_to_complement_before" value="true" disabled></label>
+                                <label class="label">add_l1_norm_reg
+                                <input type="checkbox" id="add_l1_norm_reg" name="add_l1_norm_reg" value="true" disabled></label>
+                                <label class="label">l1_norm_reg_ratio
+                                <div class="control">
+                                    <input class="input" type="text" id="l1_norm_reg_ratio" name="l1_norm_reg_ratio" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">n_layer
+                                <div class="control">
+                                    <input class="input" type="text" id="n_layer" name="n_layer" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">has_res_net
+                                <input type="checkbox" id="has_res_net" name="has_res_net" value="true" disabled></label>
+
+                                <label class="label">ts_filter_width
+                                <div class="control">
+                                    <input class="input" type="text" id="ts_filter_width" name="ts_filter_width" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">cnn_channel_size
+                                <div class="control">
+                                    <input class="input" type="text" id="cnn_channel_size" name="cnn_channel_size" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">cnn_channel_size_list
+                                <div class="control">
+                                    <input class="input" type="text" id="cnn_channel_size_list" name="cnn_channel_size_list" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">pool_size_list
+                                <div class="control">
+                                    <input class="input" type="text" id="pool_size_list" name="pool_size_list" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">input_data_names
+                                <div class="control">
+                                    <input class="input" type="text" id="input_data_names" name="input_data_names" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">output_data_names
+                                <div class="control">
+                                    <input class="input" type="text" id="output_data_names" name="output_data_names" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">annotation_col_names
+                                <div class="control">
+                                    <input class="input" type="text" id="annotation_col_names" name="annotation_col_names" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">dt_col_name
+                                <div class="control">
+                                    <input class="input" type="text" id="dt_col_name" name="dt_col_name" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">dt_col_format
+                                <div class="control">
+                                    <input class="input" type="text" id="dt_col_format" name="dt_col_format" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">dt_unit
+                                <div class="select">
+                                  <select id="dt_unit" name="dt_unit" disabled>
+                                    <option value="days">days</option>
+                                    <option value="hours">hours</option>
+                                    <option value="minutes">minutes</option>
+                                    <option value="seconds">seconds</option>
+                                    <option value="milliseconds">milliseconds</option>
+                                    <option value="relative_days">Relative days</option>
+                                    <option value="relative_hours">Relative hours</option>
+                                    <option value="relative_minutes">Relative minutes</option>
+                                    <option value="relative_seconds">Relative seconds</option>
+                                    <option value="relative_milliseconds">Relative milliseconds</option>
+                                  </select>
+                                </div></label>
+
+                                <label class="label">multi_resolution_channels
+                                <div class="control">
+                                    <input class="input" type="text" id="multi_resolution_channels" name="multi_resolution_channels" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">decrease_resolution_ratio_list
+                                <div class="control">
+                                    <input class="input" type="text" id="decrease_resolution_ratio_list" name="decrease_resolution_ratio_list" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">input_data_names_to_be_extended
+                                <div class="control">
+                                    <input class="input" type="text" id="input_data_names_to_be_extended" name="input_data_names_to_be_extended" placeholder="" disabled>
+                                </div></label>
+                            </div>
+                        </div>
+
+                        <div class="accordion-div">
+                            <label class="message-header has-background-lightblue1 accordion" for="label_data_accordiion">Data<i class="accordion"></i></label>
+                            <input type="checkbox" id="label_data_accordiion" class="accordion"/>
+                            <div class="message-body acshow" id="setting_data">
+
+                                <label class="label">ts_start
+                                <div class="control">
+                                    <input class="input" type="text" id="ts_start" name="ts_start" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">ts_end
+                                <div class="control">
+                                    <input class="input" type="text" id="ts_end" name="ts_end" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">max_data_per_ts
+                                <div class="control">
+                                    <input class="input" type="text" id="max_data_per_ts" name="max_data_per_ts" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">data_dir_path
+                                <div class="control">
+                                    <input class="input" type="text" id="data_dir_path" name="data_dir_path" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">data_set_def_path
+                                <div class="control">
+                                    <input class="input" type="text" id="data_set_def_path" name="data_set_def_path" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">target_group
+                                <div class="control">
+                                    <input class="input" type="text" id="target_group" name="target_group" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">mask_rate
+                                <div class="control">
+                                    <input class="input" type="text" id="mask_rate" name="mask_rate" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">col_index_to_mask
+                                <div class="control">
+                                    <input class="input" type="text" id="col_index_to_mask" name="col_index_to_mask" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">skip_invalid_data
+                                <input type="checkbox" id="skip_invalid_data" name="skip_invalid_data" value="true" disabled></label>
+                                <label class="label">valid_data_range
+                                <div class="control">
+                                    <input class="input" type="text" id="valid_data_range" name="valid_data_range" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">input_output_ts_offset
+                                <div class="control">
+                                    <input class="input" type="text" id="input_output_ts_offset" name="input_output_ts_offset" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">input_output_ts_offset_list
+                                <div class="control">
+                                    <input class="input" type="text" id="input_output_ts_offset_list" name="input_output_ts_offset_list" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">input_output_ts_offset_range
+                                <div class="control">
+                                    <input class="input" type="text" id="input_output_ts_offset_range" name="input_output_ts_offset_range" placeholder="" disabled>
+                                </div></label>
+
+                            </div>
+                        </div>
+
+                        <div class="accordion-div">
+                            <label class="message-header has-background-lightblue1 accordion" for="label_train_accordiion">Train<i class="accordion"></i></label>
+                            <input type="checkbox" id="label_train_accordiion" class="accordion"/>
+                            <div class="message-body acshow" id="setting_train">
+                                <label class="label">iter_to
+                                <div class="control">
+                                    <input class="input" type="text" id="iter_to" name="iter_to" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">optimizer
+                                <div class="select">
+                                  <select id="optimizer" name="optimizer" disabled>
+                                    <option value="Adam">Adam</option>
+                                    <option value="AdaBound">AdaBound</option>
+                                  </select>
+                                </div></label>
+
+                                <label class="label">learning_rate
+                                <div class="control">
+                                    <input class="input" type="text" id="learning_rate" name="learning_rate" placeholder="" disabled>
+                                </div></label>
+
+                                <label class="label">batch_size
+                                <div class="control">
+                                    <input class="input" type="text" id="batch_size" name="batch_size" placeholder="" disabled>
+                                </div></label>
+                            </div>
+                        </div>
+
+                        <div class="accordion-div">
+                            <label class="message-header has-background-lightblue1 accordion" for="label_vidual_accordiion">Visualize<i class="accordion"></i></label>
+                            <input type="checkbox" id="label_vidual_accordiion" class="accordion"/>
+                            <div class="message-body acshow" id="setting_vidual">
+
+                                <label class="label">plot_x_label
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_x_label" name="plot_x_label" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">plot_y_label
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_y_label" name="plot_y_label" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">plot_x_data_name_in_annotation
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_x_data_name_in_annotation" name="plot_x_data_name_in_annotation" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">plot_group_data_name_in_annotation
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_group_data_name_in_annotation" name="plot_group_data_name_in_annotation" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">plot_x_range
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_x_range" name="plot_x_range" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">plot_y_range
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_y_range" name="plot_y_range" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">plot_title
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_title" name="plot_title" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">plot_errors
+                                <div class="control">
+                                    <input class="input" type="text" id="plot_errors" name="plot_errors" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">calc_cc_errors
+                                <input type="checkbox" id="calc_cc_errors" name="calc_cc_errors" value="true" disabled></label>
+                                <label class="label">op_errors
+                                <div class="control">
+                                    <input class="input" type="text" id="op_errors" name="op_errors" placeholder="" disabled>
+                                </div></label>
+                            </div>
+                        </div>
+
+                        <div class="accordion-div">
+                            <label class="message-header has-background-lightblue1 accordion" for="label_server_accordiion">Server<i class="accordion"></i></label>
+                            <input type="checkbox" id="label_server_accordiion" class="accordion"/>
+                            <div class="message-body acshow" id="setting_server">
+                                <label class="label">init_model_path
+                                <div class="control">
+                                    <input class="input" type="text" id="init_model_path" name="init_model_path" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">save_root_dir
+                                <div class="control">
+                                    <input class="input" type="text" id="save_root_dir" name="save_root_dir" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">cloud_root
+                                <div class="control">
+                                    <input class="input" type="text" id="cloud_root" name="cloud_root" placeholder="" disabled>
+                                </div></label>
+                                <label class="label">prioritize_cloud
+                                <input type="checkbox" id="prioritize_cloud" name="prioritize_cloud" value="true" disabled></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tabs_report">
+                        <div id="report-loading" class="control">
+                            <button id="report_reload_submit" class="button is-link" data-i18n="reload">Reload</button>
+                        </div>
+                        <p id="report_file_tree_0">report_file_tree</p>
+                    </div>
+                    <div id="tabs_history">
+                        <div id="history-loading" class="control">
+                            <button id="history_reload_submit" class="button is-link" data-i18n="reload">Reload</button>
+                        </div>
+
+                        <!--<p id="history_file_tree_0">history_file_tree</p>
+                        <canvas id="history_accuracy"></canvas>
+                        <div id="plotly_history_accuracy"></div>-->
+                    </div>
+
+                    <div id="tabs_prediction" class="is-horizontal-center">
+                        <div class="drop-file-area" id="prediction_input_drop_file">Drop csv file into this area.</div>
+                        <div id="plot_prediction_input_div">[Input tiem series plot would be displayed here.]</div>
+                        <div id="prediction_output">[Output would be displayed here.]</div>
+                    </div>
+                </div>
+            </div>
+
+        <footer class="footer">
+            <div class="is-horizontal-center">
+                <figure class="image is-32x32 with-tag-right">
+                    <img src="img/GGlog-svg.svg" alt="Geek Guild Logo">
+                </figure>
+                <p>
+                  &#x00A9; 2019 <a href="https://www.geek-guild.jp"><strong>Geek Guild Co., Ltd.</strong></a>
+                </p>
+            </div>
+        </footer>
+
+        </div>
+    </section>
+
+    <script type="text/javascript" src="./js/forecass_web.js?update_20190403" charset="utf-8"></script>
+    <script type="text/javascript" src="./js/prediction.js" charset="utf-8"></script>
+</body>
+<html>
+

@@ -1,0 +1,100 @@
+{
+    "train_id": "IR_2D_CNN_V2_l49-c64_TUTORIAL-ZEROBASE-TRAIN",
+    "### COMMENT ###": "tutorial training CIFAR-10 (zero-base training)",
+    "debug_mode": true,
+
+    "status": "",
+    "test_only_mode": false,
+    "# prediction_mode": false,
+
+    "dataset_hash": "",
+    "use_cache": true,
+
+    "model_id": "2D_CNN_V2",
+    "model_type": "CLASSIFICATION",
+    "iter_to": 200000,
+    "optimizer": "AdaBound",
+    "learning_rate": 1e-3,
+    "batch_size": 128,
+    "dropout_ratio": 0.25,
+    "has_batch_norm": true,
+    "bn_decay": 0.95,
+    "bn_eps": 1e-3,
+
+    "input_ts_width": 0,
+    "has_to_complement_before": true,
+
+    "input_img_width": 32,
+    "flip_randomly_left_right": true,
+    "crop_randomly": true,
+    "size_random_crop_from": 40,
+    "angle_rotate_randomly": 0,
+    "rounding_angle": 0,
+    "resize_to_crop_with": "scaling_or_padding",
+
+
+    "add_l1_norm_reg": false,
+    "l1_norm_reg_ratio": 0.0,
+
+    "has_minmax_norm": true,
+    "input_max": 256,
+    "input_min": 0,
+
+    "n_layer": 48,
+    "filter_width": 3,
+    "cnn_channel_size": 64,
+    "cnn_channel_size_list": [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64],
+    "pool_size_list": [1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    "act_func_list": ["relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6", "relu6"],
+    "num_add_fc_layers": 1,
+    "fc_node_size_list": [256],
+
+    "has_res_net": true,
+    "num_cnn_layers_in_res_block": 2,
+
+    "ts_start": 0,
+    "ts_end": 32,
+    "max_data_per_ts": 1,
+
+    "data_dir_path": "/var/data/cifar-10-image/",
+    "data_set_def_path": "/var/data/cifar-10-image/data_set_def/train_cifar10_classification.csv",
+    "cache_data_set_id": "train_cifar10_classification",
+    "##### memo": "If cache_data_set_id is None, then set with train_id",
+    "refresh_cache_data_set": false,
+
+    "input_data_names": ["png"],
+
+    "annotation_col_names": [],
+
+    "dt_col_name": "",
+    "dt_col_format": "",
+    "dt_unit": "",
+
+    "plot_x_label": "samples",
+    "plot_y_label": "image class",
+    "plot_title": "cifar10 image classification",
+
+    "mask_rate": 0,
+
+    "multi_resolution_channels": 0,
+    "output_data_names": ["label"],
+    "output_classes": 10,
+
+    "input_output_ts_offset": 0,
+
+    "target_group": "TRAIN",
+    "init_model_path": "",
+    "save_root_dir": "/var/model/image_recognition/tutorials/tensorflow/",
+    "cloud_root": "s3://your-bucket/model/image_recognition/tutorials/tensorflow/",
+    "prioritize_cloud": true,
+    "train_report_frequency": 1000,
+    "test_report_frequency": 1000,
+    "save_model_frequency": 1000,
+    "summarize_layer_frequency": 1e+10,
+    "summarize_layer_name_list": [],
+    "result": "",
+    "info": "",
+    "result_model_path": "",
+    "#restore_var_name_list": []
+
+}

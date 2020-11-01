@@ -1,0 +1,41 @@
+# set enviroment in .env file
+
+version: "2.3"
+
+networks:
+  default:
+    external:
+      name: smalltrain_network
+
+services:
+  smalltrain-redis:
+    build: ./smalltrain-redis
+    image: smalltrain.org/smalltrain-redis:0.0.3-${COMPOSE_PROJECT_NAME}
+    container_name: smalltrain-redis-${COMPOSE_PROJECT_NAME}
+
+    networks:
+      default:
+        ipv4_address: ${REDIS_IP_ADDR}
+    volumes:
+      - ${REDIS_ROOT}/data:/data
+    # restart: unless-stopped
+
+  smalltrain:
+    build: ./smalltrain
+    image: smalltrain.org/smalltrain:0.0.5-${COMPOSE_PROJECT_NAME}
+    container_name: smalltrain-${COMPOSE_PROJECT_NAME}
+    ports:
+      - ${TENSORBOARD_PORT}:6006
+    networks:
+      default:
+        ipv4_address: ${SMALLTRAIN_IP_ADDR}
+    volumes:
+      # For Ubuntu
+      - ${SMALLTRAIN_ROOT}:/var/smalltrain
+      - ${GGUTILS_SRC_ROOT}:/var/ggutils
+      - ${DATA_ROOT}:/var/data
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
+    stdin_open: true
+    tty: true

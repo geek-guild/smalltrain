@@ -1,0 +1,6 @@
+{
+  "admin_user_id": "User_XXXXXXXXXXXXXXXXXXXXXXX",
+  "db_user": "ggdb_XXXX",
+  "db_password": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  "jwt_secret_key_path": "/usr/local/etc/vendor/gg/jwt_secret.key"
+}

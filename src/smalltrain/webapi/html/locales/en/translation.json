@@ -1,0 +1,5 @@
+{
+  "operation_read_submit": "Read",
+  "prediction_submit": "Prediction",
+  "reload": "Reload"
+}
