@@ -11,15 +11,27 @@ import json
 
 class GGSetting:
 
+    DEFAULT_WEB_API_PORT = 50000
+
     def __init__(self):
         self.read_setting_from_file()
 
-    def read_setting_from_file(self, file_path='/usr/local/etc/vendor/gg/forecass/forecass-conf.json'):
+    def read_setting_from_file(self, file_path='/usr/local/etc/vendor/gg/smalltrain/smalltrain_conf.json'):
         with open(file_path) as f:
             self.setting_json = json.load(f)
 
     def get(self, key):
         return self.setting_json[key]
+
+    def get_web_api_port(self):
+        web_api_port = self.setting_json.get('web_api_port')
+        try:
+            web_api_port = int(web_api_port)
+            assert web_api_port > 0
+        except (AssertionError, ValueError) as e:
+            web_api_port = GGSetting.DEFAULT_WEB_API_PORT
+
+        return web_api_port
 
     def get_admin_user_id(self):
         return self.setting_json['admin_user_id']

@@ -7,7 +7,7 @@ from distutils.core import setup
 
 setup(
     name='smalltrain',
-    version='0.2.0.3',
+    version='0.2.1.0',
     description='SmallTrain',
     author='Geek Guild Co., Ltd.',
     author_email='labo@geek-guild.jp',

@@ -26,6 +26,7 @@ services:
     container_name: smalltrain-${COMPOSE_PROJECT_NAME}
     ports:
       - ${TENSORBOARD_PORT}:6006
+      - ${JUPYTER_NOTEBOOK_PORT}:8888
     networks:
       default:
         ipv4_address: ${SMALLTRAIN_IP_ADDR}

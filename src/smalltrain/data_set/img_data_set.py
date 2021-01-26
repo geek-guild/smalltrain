@@ -11,6 +11,7 @@ import math
 import csv
 import os
 import sys
+import cv2
 
 from multiprocessing import Process, Manager
 
@@ -94,7 +95,20 @@ class IMGDataSet(GGDataSet):
             print('{}TODO Use max_data_per_img with default value:{}'.format(PREFIX, self.max_data_per_img))
 
         # self.col_size = len(self.input_data_names)
-        self.input_ch_size = 3 # channel size for 3 colors
+        # Ensure that self.col_size = 1 if Monochrome mode
+
+        if hparams and 'monochrome_mode' in hparams.keys():
+            print('{}Use monochrome_mode in hparams:{}'.format(PREFIX, hparams['monochrome_mode']))
+            self.monochrome_mode = hparams['monochrome_mode']
+        else:
+            print('{}TODO Use monochrome_mode with default value'.format(PREFIX))
+            self.monochrome_mode = False
+
+        # Ensure that self.col_size = 1 if Monochrome mode
+        if self.monochrome_mode:
+            self.input_ch_size = 1 # channel size for one color
+        else:
+            self.input_ch_size = 3 # channel size for 3 colors
         self.col_size = self.input_ch_size
         print('self.col_size:{}'.format(self.col_size))
 
@@ -503,9 +517,10 @@ class IMGDataSet(GGDataSet):
             generate_ts_time += (time.time() - reset_time)
 
         # wait for thread finish
-        while len(self.thread_dict) > 0:
-            print('waiting for thread finish with len:{}'.format(len(self.thread_dict)))
-            time.sleep(1)
+        if self.multiprocessing:
+            while len(self.thread_dict) > 0:
+                print('waiting for thread finish with len:{}'.format(len(self.thread_dict)))
+                time.sleep(1)
 
         print('DONE cut data with data_index')
 
@@ -528,4 +543,11 @@ class IMGDataSet(GGDataSet):
 
         return input_data, output_data
 
+
+    def binarize_img(self, img_data):
+        gray_img = cv2.cvtColor(img_data, cv2.COLOR_RGB2GRAY).astype('uint8')
+        # _, binarized_img = cv2.threshold(gray_img, 30, 255, cv2.THRESH_BINARY)
+        binarized_img = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                              cv2.THRESH_BINARY, 15, 8)
+        return binarized_img
 

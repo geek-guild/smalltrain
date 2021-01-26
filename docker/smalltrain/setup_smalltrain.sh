@@ -49,6 +49,9 @@ pip install .
 cd /var/ggutils
 pip install .
 
+# Install libGL.so
+apt-get install -y libgl1-mesa-dev
+
 # Install latest onnx-tensorflow(onnx-tf)
 pip install --user https://github.com/onnx/onnx-tensorflow/archive/master.zip
 

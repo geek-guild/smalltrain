@@ -22,6 +22,7 @@ from smalltrain.utils import tf_log_to_csv
 from smalltrain.model.user import UserManager, User, UserNotFoundError
 import smalltrain.utils.jwt_util as jwt_util
 import smalltrain.utils.proc as proc
+from smalltrain.utils.gg_setting import GGSetting
 
 # app = Flask(__name__)
 # set the project root directory as the static folder.
@@ -45,10 +46,20 @@ logger = logging.getLogger()
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
+SMALLTRAIN_CONF_DIR_PATH = '/usr/local/etc/vendor/gg/'
+mongodb_connection_setting_file_path = os.path.join(SMALLTRAIN_CONF_DIR_PATH, 'mongodb_connection_setting.json')
+setting_dict = {}
+with open(mongodb_connection_setting_file_path, mode='r') as json_file:
+    setting_dict = json.load(json_file)
+
+db_host = setting_dict['host']
+db_port = setting_dict['port']
+
 from smalltrain.utils.gg_mongo_data_base import GGMongoDataBase
 from smalltrain.utils.gg_mongo_data_base import TimeoutError
 db = GGMongoDataBase.Instance()
-db.set_db(host='localhost')
+db.set_db(host=db_host, port=db_port)
+logger.info('db_host: {}, db_port: {}'.format(db_host, db_port))
 
 @app.route('/favicon.ico')
 def favicon():
@@ -109,11 +120,18 @@ def signin():
     password = None
 
     if request.method == 'GET':
+        logger.info('GET with request.args: {}'.format(request.args))
         user_id_or_email = request.args.get('user_id_or_email', default='', type=str)
         password = request.args.get('password', default='', type=str)
     elif request.method == 'POST':
-        user_id_or_email = request.form['user_id_or_email']
-        password = request.form['password']
+        json_data = request.get_json()
+        logger.info('POST with request.get_json: {}'.format(json_data))
+        user_id_or_email = json_data.get('user_id_or_email')
+        password = json_data.get('password')
+
+        # logger.info('POST with request.form: {}'.format(request.form))
+        # user_id_or_email = request.form['user_id_or_email']
+        # password = request.form['password']
 
     message = None
     status = None
@@ -801,4 +819,5 @@ if __name__ == '__main__':
     # local test
     # app.run(debug=True, host='0.0.0.0', port=5000)
     # publish
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    web_api_port = GGSetting().get_web_api_port()
+    app.run(debug=False, host='0.0.0.0', port=web_api_port)
