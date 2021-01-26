@@ -24,13 +24,19 @@ class UserManager:
         self._db = db
 
     # CRUD
+    def create(self, use_json=None):
+        user = User()
+        if use_json:
+            user.set_with_json(self, use_json)
+        user.update(self._db)
+
     def read(self, user_id):
         _user_json = self._db.read_with_group_key(User.group_key, user_id)
         # print('[read]_user_json:{}'.format(_user_json))
         if _user_json is None:
             return None
         user = User()
-        user.set_with_json(_user_json)
+        user.set_with_json(_user_json, is_plane_password=False)
         return user
 
     def read_all(self):
@@ -84,20 +90,39 @@ class User:
         :param last_signin_dt: Datetime, last signin datetimem(in UTC)
         :param session_id: String,
         '''
+        self.__password = None
         self.set(user_id, user_name, plain_password, last_signin_dt, session_id)
 
     @property
     def password(self):
         # raise Exception('Can not get password')
-        return '********'
+        if self.__password is None:
+            return None
+        return '@property password: *********{}'.format(self.__password[0])
 
     @password.setter
     def password(self, plain_password):
-        self.__password = encrypt_password(plain_password)
+        self.set_password(plain_password)
 
     @password.deleter
     def password(self):
         del self.__password
+
+    def get_password(self):
+        # raise Exception('Can not get password')
+        if self.__password is None:
+            return None
+        return '@property password: *********{}'.format(self.__password[-1])
+
+    def set_password(self, plain_password):
+        if plain_password is None:
+            print('__password is set with None')
+            self.__password = None
+        else:
+            self.__password = encrypt_password(plain_password)
+            print('__password is set to {} with encrypted plain_password: {}'.format(
+                self.__password[0] + '*' * 8 + self.__password[-1],
+                plain_password[0] + '*' * 8 + plain_password[-1]))
 
     def set(self, user_id=None, user_name=None, plain_password=None, last_signin_dt=None, session_id=None):
         if user_id is None:
@@ -107,12 +132,18 @@ class User:
             self.user_id = user_id
 
         # set encripted password
-        self.__password = plain_password
+        self.set_password(plain_password)
         self.user_name = user_name
         self.last_signin_dt = last_signin_dt
         self.session_id = session_id
 
-    def set_with_json(self, use_json):
+    def set_with_json(self, use_json, is_plane_password=True):
+        '''
+
+        :param use_json:
+        :param is_plane_password: Whether the password in use_json is plane or not (Default: True)
+        :return:
+        '''
         # user_id
         self.user_id = use_json['user_id']
 
@@ -123,10 +154,13 @@ class User:
             self.user_name = None
 
         # password
-        try:
+        if is_plane_password:
+            try:
+                self.set_password(use_json['password'])
+            except KeyError:
+                self.set_password(None)
+        else:
             self.__password = use_json['password']
-        except KeyError:
-            self.__password = None
 
         # last_signin_dt
         try:

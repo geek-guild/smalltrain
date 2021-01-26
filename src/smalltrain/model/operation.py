@@ -5,6 +5,8 @@ import os
 
 import ggutils.s3_access as s3_access
 
+import smalltrain as st
+
 try:
     # For the case smalltrain is installed as Python library
     print('try to load smalltrain modules from Python library')
@@ -32,14 +34,13 @@ def get_model_list():
     return model_list, model_id_list
 
 MODEL_LIST, MODEL_ID_LIST = get_model_list()
-DEFAULT_MODEL_ID = NNModel.MODEL_ID
 
-def construct_model(log_dir_path, model_id, hparams, train_data=None, debug_mode=True, prediction_mode=False):
+def construct_model(log_dir_path, model_id, hparams, train_data=None, debug_mode=True):
 
     if model_id in MODEL_ID_LIST:
         for _m in MODEL_LIST:
             if _m.MODEL_ID == model_id:
-                model = _m.construct_model(log_dir_path=log_dir_path, model_id=model_id, hparams=hparams, train_data=train_data, debug_mode=debug_mode, prediction_mode=prediction_mode)
+                model = _m.construct_and_prepare_model(log_dir_path=log_dir_path, model_id=model_id, hparams=hparams, train_data=train_data, debug_mode=debug_mode)
                 return model
     raise TypeError('Invalid model_id:{}'.format(model_id))
 
@@ -58,182 +59,157 @@ class Operation:
         debug_mode: Boolean, if `True` then running with debug mode.
     """
 
+    def __init__(self, hparams=None, setting_file_path=None):
+        self._hparam_ins = st.Hyperparameters(hparams, setting_file_path)
+        self.hparams_dict = self._hparam_ins.__dict__
+        print('init hparams_dict: {}'.format(self.hparams_dict))
 
-    def __init__(self, params=None, debug_mode=False):
-        self.params = {}
+    def get_hparams_ins(self):
+        return self._hparam_ins
 
-        self.params['model_prefix'] = 'nn'
-        self.params['save_root_dir'] = '/var/tensorflow/tsp/'
-        self.params['init_model_path'] = None
-        self.params['restore_var_name_list'] = None
-        self.params['untrainable_var_name_list'] = None
-        self.params['learning_rate'] = 1e-4
+    def update_params_from_file(self, setting_file_path):
+        self._hparam_ins.update_hyper_param_from_file(setting_file_path)
+        self.hparams_dict = self._hparam_ins.__dict__
 
-        # About batch size
-        self.params['batch_size'] = 128
-        # About minibatch operation
-        self.params['evaluate_in_minibatch'] = False
+    def update_hyper_param_from_json(self, json_obj):
+        self._hparam_ins.update_hyper_param_from_json(json_obj)
+        self.hparams_dict = self._hparam_ins.__dict__
 
-        self.params['iter_to'] = 10000
-        self.params['dropout_ratio'] = 0.5
-        self.params['train_id'] = 'TEST_YYYYMMDD-HHmmSS'
-        self.params['model_id'] = DEFAULT_MODEL_ID
-        self.params['model_type'] = 'REGRESSION'
-        self.params['prediction_mode'] = None
-        self.params['debug_mode'] = None
-        self.params['optimizer'] = None
-        self.params['input_ts_size'] = 12
-        self.params['input_img_width'] = 12
-        self.params['input_output_ts_offset'] = 1
-        self.params['input_output_ts_offset_range'] = None
-        self.params['input_output_ts_offset_list'] = None
-        self.params['has_to_complement_before'] = True
-        self.params['n_layer'] = 5
-        self.params['num_add_fc_layers'] = 0
-        self.params['fc_node_size_list'] = None
-        self.params['fc_weight_stddev_list'] = None
-        self.params['fc_bias_value_list'] = None
+    def read_hyper_param_from_file(self, setting_file_path):
+        '''
+        This method is for the compatibility for the codes:
 
-        # about sub model
-        self.params['sub_model_url'] = None
-        self.params['sub_model_allocation'] = 0.0
-        self.params['sub_model_input_point'] = None
-        self.params['sub_model_output_point'] = None
+        :param setting_file_path:
+        :return:
+        '''
+        self.update_params_from_file(setting_file_path=setting_file_path)
+        self.hparams_dict = self._hparam_ins.__dict__
+        return self.hparams_dict
 
-        # about ResNet
-        self.params['has_res_net'] = False
-        self.params['num_cnn_layers_in_res_block'] = 2
+    def prepare_dirs(self):
+        '''
+        Prepare directories used in operation
+        :return:
+        '''
 
-        self.params['ts_start'] = None
-        self.params['ts_end'] = None
-        self.params['test_ts_index_from'] = None
-        self.params['test_ts_index_to'] = None
-        self.params['max_data_per_ts'] = None
-        self.params['cnn_channel_size'] = 4
-        self.params['cnn_channel_size_list'] = None
-        self.params['pool_size_list'] = None
-        self.params['act_func_list'] = None
-        self.params['cnn_weight_stddev_list'] = None
-        self.params['cnn_bias_value_list'] = None
-
-        # about data augmentation
-        self.params['flip_randomly_left_right'] = False
-        self.params['crop_randomly'] = False
-        self.params['size_random_crop_from'] = None
-        self.params['angle_rotate_randomly'] = None
-        self.params['rounding_angle'] = 90
-        self.params['resize_to_crop_with'] = None
-
-        # about L1 term loss
-        self.params['add_l1_norm_reg'] = False
-        self.params['l1_norm_reg_ratio'] = 0.0
-        # about preactivation regularization
-        self.params['add_preactivation_regularization'] = False
-        self.params['preactivation_regularization_value_ratio'] = 0.0
-        self.params['preactivation_maxout_list'] = None
-
-        # about min-max normalization
-        self.params['has_minmax_normm'] = True
-        self.params['input_min'] = None
-        self.params['input_max'] = None
-        # about batch normalization
-        self.params['has_batch_norm'] = True
-        self.params['bn_decay'] = NNModel.DEFAULT_BN_DECAY
-        self.params['bn_eps'] = NNModel.DEFAULT_BN_ESP
-        self.params['data_dir_path'] = None
-        self.params['data_set_def_path'] = None
-        self.params['input_data_names'] = None
-        self.params['input_data_names_to_be_extended'] = None
-        self.params['output_data_names'] = None
-        self.params['output_classes'] = None
-        # col name that has time series data
-        self.params['dt_col_name'] = None
-        self.params['dt_col_format'] = 'YYYY-mm-DD'
-        self.params['dt_unit'] = 'day'
-        # datetime col
-        self.params['add_dt_col_name_list'] = None
-        self.params['annotation_col_names'] = None
-        self.params['multi_resolution_channels'] = 0
-        self.params['decrease_resolution_ratio'] = NNModel.DEFAULT_DECREASE_RESOLUTION_RATIO
-        self.params['decrease_resolution_ratio_list'] = None
-        self.params['target_group'] = None
-        self.params['test_only_mode'] = None
-        self.params['mask_rate'] = None
-        self.params['col_index_to_mask'] = None
-        self.params['skip_invalid_data'] = None
-        self.params['valid_data_range'] = None
-        self.params['plot_x_label'] = None
-        self.params['plot_y_label'] = None
-        self.params['plot_x_data_name_in_annotation'] = None
-        self.params['plot_group_data_name_in_annotation'] = None
-        self.params['plot_x_range'] = None
-        self.params['plot_y_range'] = None
-        self.params['plot_title'] = None
-        self.params['plot_errors'] = None
-        self.params['plot_animation'] = None
-        self.params['calc_cc_errors'] = None
-        self.params['op_errors'] = None
-        self.params['rank_boundary_list'] = None
-        self.params['cloud_root'] = None
-        self.params['prioritize_cloud'] = False
-        self.params['train_report_frequency'] = False
-        self.params['test_report_frequency'] = False
-        self.params['save_model_frequency'] = False
-        self.params['export_to_onnx'] = False
-        self.params['summarize_layer_frequency'] = None
-        self.params['use_cache'] = False
-        self.params['cache_db_host'] = 'localhost'
-        self.params['json_param'] = None
-        self.params['scrpit_test'] = False
+        log_dir_path = self.hparams_dict['save_root_dir'] + '/logs/' + self.hparams_dict['train_id']
+        log_dir_path = log_dir_path.replace('//', '/')
+        os.makedirs(log_dir_path, exist_ok=True)
+        self.log_dir_path = log_dir_path
+        # Set value to hyperparameter
+        self._hparam_ins.set('log_dir_path', log_dir_path)
 
 
-        if params is not None:
-            for k in params.keys():
-                self.params[k] = params[k]
+        save_dir_path = self.hparams_dict['save_root_dir'] + '/model/' + self.hparams_dict['train_id'] + '/'
+        save_dir_path = save_dir_path.replace('//', '/')
+        os.makedirs(save_dir_path, exist_ok=True)
+        self.save_dir_path = save_dir_path
+        self._hparam_ins.set('save_dir_path', save_dir_path)
 
+        save_file_name = 'model-{}_lr-{}_bs-{}.ckpt'.format(self.hparams_dict['model_prefix'], self.hparams_dict['learning_rate'],
+                                                            self.hparams_dict['batch_size'])
+        save_file_path = save_dir_path + '/' + save_file_name
+        save_file_path = save_file_path.replace('//', '/')
+        self.save_file_path = save_file_path
+        self._hparam_ins.set('save_file_path', save_file_path)
+
+        report_dir_path = self.hparams_dict['save_root_dir'] + '/report/' + self.hparams_dict['train_id'] + '/'
+        report_dir_path = report_dir_path.replace('//', '/')
+        os.makedirs(report_dir_path, exist_ok=True)
+        self.report_dir_path = report_dir_path
+        self._hparam_ins.set('report_dir_path', report_dir_path)
+
+        operation_dir_path = os.path.join(self.hparams_dict['save_root_dir'], 'operation')
+        operation_dir_path = os.path.join(operation_dir_path, self.hparams_dict['train_id'])
+        operation_file_path = os.path.join(operation_dir_path, self.hparams_dict['train_id'] + '.json')
+        os.makedirs(operation_dir_path, exist_ok=True)
+        # self.operation_dir_path = operation_dir_path
+        # self.operation_file_path = operation_file_path
+
+        if self.hparams_dict['cloud_root'] is not None:
+            print('Upload the hparams to cloud: {}'.format(self.hparams_dict['cloud_root']))
+            upload_to_cloud(operation_file_path, self.hparams_dict['cloud_root'], self.hparams_dict['save_root_dir'])
+
+        print('[Operation]DONE prepare_dirs')
+
+    def construct_and_prepare_model(self, hparams=None, train_data=None):
+
+        hparams = hparams or self.hparams_dict
+        model_id = hparams['model_id']
+        print('construct_and_prepare_model with model_id: {}'.format(model_id))
+        if model_id in MODEL_ID_LIST:
+            for _m in MODEL_LIST:
+                if _m.MODEL_ID == model_id:
+                    model = _m.construct_and_prepare_model(log_dir_path=hparams['log_dir_path'], model_id=model_id,
+                                                           hparams=hparams, train_data=train_data,
+                                                           debug_mode=hparams['debug_mode'])
+                    self.model = model
+                    return model
+        raise TypeError('Invalid model_id:{}'.format(model_id))
+
+    def train(self, hparams=None):
+        hparams = hparams or self.hparams_dict
+
+        if self.model is None:
+            self.construct_and_prepare_model(hparams=hparams)
+
+        self.model.train(iter_to=hparams['iter_to'], learning_rate=hparams['learning_rate'],
+                    batch_size=hparams['batch_size'], dropout_ratio=hparams['dropout_ratio'],
+                    l1_norm_reg_ratio=hparams['l1_norm_reg_ratio'], save_file_path=hparams['save_file_path'],
+                    report_dir_path=hparams['report_dir_path'])
+        print('DONE train data ')
+        print('====================')
+
+    def auto(self, hparams=None, setting_file_path=None):
+
+        print('====================')
+        print('TODO auto operation with hyper parameter: ')
+        print(self.hparams_dict)
+        print('====================')
+        self.prepare_dirs()
+        print('DONE prepare_dirs')
+        print('====================')
+        print('TODO construct_and_prepare_model')
+        self.construct_and_prepare_model()
+        print('DONE construct_and_prepare_model')
+        print('====================')
+        if (not self.hparams_dict.get('prediction_mode')):
+            print('TODO train( or test only)')
+            self.train()
+            print('DONE train( or test only)')
+            print('====================')
+        print('DONE auto operation')
+        print('====================')
 
 
 def main(exec_param):
+    print(exec_param)
+    operation = Operation(setting_file_path=exec_param['setting_file_path'])
+    operation.auto()
+
+
+def _main(exec_param):
 
     print(exec_param)
 
-    save_dir_path = exec_param['save_root_dir'] + '/model/' + exec_param['train_id'] + '/'
-    save_dir_path = save_dir_path.replace('//', '/')
+    operation = Operation()
 
-    save_file_name = 'model-{}_lr-{}_bs-{}.ckpt'.format(exec_param['model_prefix'], exec_param['learning_rate'], exec_param['batch_size'])
-    save_file_path = save_dir_path + '/' + save_file_name
-    save_file_path = save_file_path.replace('//', '/')
+    if 'setting_file_path' in exec_param.keys() and exec_param['setting_file_path'] is not None:
+        operation.update_params_from_file(exec_param['setting_file_path'])
+    elif 'json_param' in exec_param.keys() and exec_param['json_param'] is not None:
+        operation.update_hyper_param_from_json(exec_param['json_param'])
 
-    log_dir_path = exec_param['save_root_dir'] + '/logs/' + exec_param['train_id']
-    log_dir_path = log_dir_path.replace('//', '/')
+    exec_param = operation.hparams_dict
+    print('updated exec_param:{}'.format(exec_param))
 
-    operation_dir_path = os.path.join(exec_param['save_root_dir'], 'operation')
-    operation_dir_path = os.path.join(operation_dir_path, exec_param['train_id'])
-    operation_file_path = os.path.join(operation_dir_path, exec_param['train_id'] + '.json')
+    #  prepare directories
+    operation.prepare_dirs()
 
-    os.makedirs(save_dir_path, exist_ok=True)
-    os.makedirs(log_dir_path, exist_ok=True)
-    os.makedirs(operation_dir_path, exist_ok=True)
-
-    if exec_param['cloud_root'] is not None:
-        print('upload_to_cloud:{}'.format(exec_param))
-        upload_to_cloud(operation_file_path, exec_param['cloud_root'], exec_param['save_root_dir'])
-
-    test_mode = False
-
-    report_dir_path = exec_param['save_root_dir'] + '/report/' + exec_param['train_id'] + '/'
-    report_dir_path = report_dir_path.replace('//', '/')
-    os.makedirs(report_dir_path, exist_ok=True)
-
-    # prediction_mode = (exec_param['prediction_mode'] and exec_param['prediction_mode'] == True)
-    prediction_mode = ('prediction_mode' in exec_param.keys() and exec_param['prediction_mode'] == True)
-
-    # if exec_param['scrpit_test'] == True:
     if 'scrpit_test' in exec_param.keys() and exec_param['scrpit_test'] == True:
         test_static_methods()
 
-        model = construct_model(log_dir_path=log_dir_path, hparams=exec_param)
-        model.train(iter_to=1000, learning_rate=exec_param['learning_rate'], batch_size=exec_param['batch_size'], dropout_ratio=exec_param['dropout_ratio'], save_file_path=save_file_path)
+        model = operation.construct_and_prepare_model()
+        model.train(iter_to=1000, learning_rate=exec_param['learning_rate'], batch_size=exec_param['batch_size'], dropout_ratio=exec_param['dropout_ratio'], save_file_path=exec_param['save_file_path'])
         exit()
 
     model = None
@@ -242,10 +218,9 @@ def main(exec_param):
     print('TODO train data ')
 
     if model is None:
-        model = construct_model(log_dir_path=log_dir_path, model_id=exec_param['model_id'], train_data=None, debug_mode=exec_param['debug_mode'],
-                        prediction_mode=prediction_mode, hparams=exec_param)
+        model = operation.construct_and_prepare_model()
 
-    model.train(iter_to=exec_param['iter_to'], learning_rate=exec_param['learning_rate'], batch_size=exec_param['batch_size'], dropout_ratio=exec_param['dropout_ratio'], l1_norm_reg_ratio=exec_param['l1_norm_reg_ratio'], save_file_path=save_file_path, report_dir_path=report_dir_path)
+    operation.train()
     print('DONE train data ')
     print('====================')
 
@@ -339,46 +314,6 @@ def main_with_train_id(train_id):
 
 import json
 
-def read_hyper_param_from_file(setting_file_path):
-    return update_hyper_param_from_file(current_hyper_param=None, setting_file_path=setting_file_path)
-
-def update_hyper_param_from_file(current_hyper_param, setting_file_path, debug_mode=False):
-    if current_hyper_param is None:
-        operation = Operation()
-        current_hyper_param = operation.params
-    try:
-        with open(setting_file_path) as f:
-            json_obj = json.load(f)
-            updated_hyper_param = update_hyper_param_with_json_obj(current_hyper_param, json_obj, debug_mode)
-        return updated_hyper_param
-    except FileNotFoundError as e:
-        print(e)
-        return current_hyper_param
-
-def update_hyper_param_from_json(current_hyper_param, json_param_string, debug_mode=False):
-    print('json_param_string: {}'.format(json_param_string))
-    # update current_hyper_param by given json_param_string
-    try:
-        json_obj = json.loads(json_param_string)
-        updated_hyper_param = update_hyper_param_with_json_obj(current_hyper_param, json_obj, debug_mode)
-        return updated_hyper_param
-    except FileNotFoundError as e:
-        print(e)
-        return current_hyper_param
-
-def update_hyper_param_with_json_obj(current_hyper_param, json_obj, debug_mode=False):
-    updated_hyper_param = current_hyper_param.copy()
-    for _k in json_obj.keys():
-        if _k in current_hyper_param.keys():
-            _update_v = json_obj[_k]
-            if debug_mode:
-                print('Update exec_param {} to {}'.format(_k, _update_v))
-            updated_hyper_param[_k] = _update_v
-        else:
-            if debug_mode:
-                print('No key {} in exec_param'.format(_k))
-    return updated_hyper_param
-
 
 if __name__ == '__main__':
 
@@ -410,7 +345,7 @@ if __name__ == '__main__':
                         help='Dropout ratio')
     parser.add_argument('--train_id', '-tid', type=str, default='TEST_YYYYMMDD-HHmmSS',
                         help='id attached to model and log dir to identify train operation ')
-    parser.add_argument('--model_id', '-mid', type=str, default=DEFAULT_MODEL_ID,
+    parser.add_argument('--model_id', '-mid', type=str, default=st.Hyperparameters.DEFAULT_DICT['model_id'],
                         help='id attached to model to identify model constructure ')
     parser.add_argument('--model_type', '-mty', type=str, default='REGRESSION',
                         help='model_type ')
@@ -418,6 +353,9 @@ if __name__ == '__main__':
                         help='Whether prediction mode or not')
     parser.add_argument('--debug_mode', '-dmd', type=bool, default=None,
                         help='Whether debug mode or not')
+    parser.add_argument('--monochrome_mode', '-mmd', type=bool, default=False,
+                        help='Whether monochrome mode or not')
+
     parser.add_argument('--optimizer', '-otm', type=str, default=None,
                         help='String, optimizer')
 
@@ -653,14 +591,5 @@ if __name__ == '__main__':
 
     exec_param = vars(args)
     print('init exec_param:{}'.format(args))
-
-    if 'setting_file_path' in exec_param.keys() and exec_param['setting_file_path'] is not None:
-        exec_param = update_hyper_param_from_file(current_hyper_param=exec_param, setting_file_path=exec_param['setting_file_path'], debug_mode=True)
-    elif 'json_param' in exec_param.keys() and exec_param['json_param'] is not None:
-        json_param = exec_param['json_param']
-        exec_param = update_hyper_param_from_json(current_hyper_param=exec_param, json_param_string=json_param)
-
-
-    print('updated exec_param:{}'.format(exec_param))
 
     main(exec_param)

@@ -31,7 +31,7 @@ import tensorflow_hub as hub
 
 import tensorflow as tf_v2
 
-
+import smalltrain as st
 from smalltrain.data_set.ts_data_set import TSDataSet
 from smalltrain.utils import hash_array
 import ggutils.gif_util as gif_util
@@ -201,8 +201,42 @@ class NNModel:
         else:
             print('Use export_to_onnx with default value:{}'.format(self.export_to_onnx))
 
+    # def construct_model(self, log_dir_path, model_id=None, train_data=None, debug_mode=True, prediction_mode=False, hparams=None):
+    def construct_model(self, log_dir_path=None, hparams=None):
+        '''
+        Construct model with settig parameters.
+        NN model is to be defined and restored after this function called.
+        :param hparams:
+        :param log_dir_path:
+        :return:
+        '''
+        PREFIX = 'construct_model'
+        print('{}__init__'.format(PREFIX))
+        self.set_params(hparams=hparams, log_dir_path=log_dir_path)
 
-    def construct_model(self, log_dir_path, model_id=None, train_data=None, debug_mode=True, prediction_mode=False, hparams=None):
+        # Set parameters from dataset or not
+        has_to_generate_data_set = True
+        if self.hparams.get('set_model_parameter_from_dataset'):
+            last_time = time.time()
+            self.auto_set_model_parameter()
+            message = '---------- time:{} DONE auto_set_model_parameter'.format(time.time() - last_time)
+            print(message)
+            has_to_generate_data_set = False
+
+        # Generate dataset
+        has_to_generate_data_set = has_to_generate_data_set and (not self.hparams.get('prediction_mode'))
+        message = 'has_to_generate_data_set: {}'.format(has_to_generate_data_set)
+        print(message)
+        if has_to_generate_data_set:
+            self.generate_data_set()
+        return self
+
+    def construct_and_prepare_model(self, log_dir_path, model_id=None, train_data=None, debug_mode=True, prediction_mode=False, hparams=None):
+        self.construct_model(log_dir_path=log_dir_path, hparams=hparams)
+        self.prepare_model()
+        return self
+
+    def set_params(self, log_dir_path, model_id=None, train_data=None, debug_mode=True, prediction_mode=False, hparams=None):
 
         # input_past_days = 30
         # input_day_from = 60
@@ -279,10 +313,15 @@ class NNModel:
 
         self.train_data = train_data
 
-        try:
-            self.col_size = self.data_set.col_size
-        except AttributeError:
-            self.col_size = None
+        # Set col_size from
+        # 1. hparams.get('col_size')
+        # 2. data_set.col_size
+        self.col_size = hparams.get('col_size')
+        if self.col_size is None:
+            try:
+                self.col_size = self.data_set.col_size
+            except AttributeError:
+                self.col_size = None
 
         # update by hparams
 
@@ -558,12 +597,12 @@ class NNModel:
             self.output_classes = self.get_output_classes_from_model(self.init_model_path)
             hparams['output_classes'] = self.output_classes
 
-        last_time = time.time()
-        self.auto_set_model_parameter()
-        print('---------- time:{} DONE auto_set_model_parameter'.format(time.time() - last_time))
+        self.log_dir_path = log_dir_path
+
+    def prepare_model(self):
+
         last_time = time.time()
 
-        self.log_dir_path = log_dir_path
         self.result_sum = []
 
         self.sess = tf.InteractiveSession()
@@ -573,15 +612,9 @@ class NNModel:
         self.saver = tf.train.Saver(var_list=None, max_to_keep=None)
         self.global_iter = 0
         self.sess.run(tf.global_variables_initializer())
-        if self.untrainable_var_name_list is not None:
-            self.trainable_variables = self.remove_trainable(self.untrainable_var_name_list)
-            self.set_optimizer()
-        # restore model
-        if self.init_model_path is not None:
-            print('restore model from {}'.format(self.init_model_path))
-            has_restored = self.restore(self.init_model_path, self.restore_var_name_list)
-            print('has_restored:', has_restored)
-            # if it has not been restored, then the model will be initialized with Prob dist.
+
+        self.restore_model()
+
         print('---------- time:{} DONE init model'.format(time.time() - last_time))
         last_time = time.time()
 
@@ -592,10 +625,7 @@ class NNModel:
 
         self.can_not_generate_input_output_data = None
 
-        self.data_set = TSDataSet(debug_mode=self.debug_mode, prediction_mode=self.prediction_mode, hparams=self.hparams)
-
-        # _input_data, _output_data = self.data_set.generate_input_output_data()
-        self.data_set.generate_input_output_data()
+        self.generate_data_set()
 
         self.input_width = self.data_set.input_ts_width
         self.col_size = self.data_set.col_size
@@ -606,6 +636,29 @@ class NNModel:
         print('DONE auto_set_model_parameter')
         return True
 
+    def generate_data_set(self):
+        self.data_set = TSDataSet(debug_mode=self.debug_mode, prediction_mode=self.prediction_mode, hparams=self.hparams)
+        self.data_set.generate_input_output_data()
+
+    def restore_model(self):
+        '''
+        Class method to restore model
+        (No need to set args, use hparams to restore model)
+        :return:
+        '''
+        # restore model
+        if self.init_model_path is not None:
+            print('[restore_model]restore model from {}'.format(self.init_model_path))
+            has_restored = self.restore(self.init_model_path, self.restore_var_name_list)
+            print('[restore_model]has_restored:', has_restored)
+            # if it has not been restored, then the model will be initialized with Prob dist.
+        else:
+            print('[restore_model]init_model_path is empty. No need to restore')
+
+        # Set optimizer again when trainable_variables is changed
+        if self.untrainable_var_name_list is not None:
+            self.trainable_variables = self.remove_trainable(self.untrainable_var_name_list)
+            self.set_optimizer()
 
     def restore(self, init_model_path, var_name_list=None):
         from smalltrain.model.operation import is_s3_path, download_to_local, upload_to_cloud
@@ -719,12 +772,12 @@ class NNModel:
 
     def reload_setting(self, setting_file_path=None):
         # usage: reload_hyper_param = nn_model_ins.reload_setting()
-        from smalltrain.model.operation import read_hyper_param_from_file
         try:
             if setting_file_path is None:
                 setting_file_path = self.hparams['setting_file_path']
             assert os.path.isfile(setting_file_path)
-            reload_hyper_param = read_hyper_param_from_file(setting_file_path)
+            reload_hparams_ins = st.Hyperparameters(hparams=None, setting_file_path=setting_file_path)
+            reload_hyper_param = reload_hparams_ins.get_as_dict()
             return reload_hyper_param
         except AssertionError as e:
             print('Could not reload setting with error:{}'.format(e))
