@@ -1,3 +1,5 @@
+import smalltrain as st
+
 from dateutil.parser import parse as parse_datetime
 from datetime import timezone
 from datetime import timedelta
@@ -13,6 +15,7 @@ import os
 import sys
 
 from multiprocessing import Process, Manager
+import multiprocessing as mp
 
 from ggutils.gg_data_base import GGDataBase
 from ggutils.gg_hash import GGHash
@@ -254,10 +257,24 @@ class GGDataSet:
         self.prediction_mode = prediction_mode
         print('{}init with prediction_mode:{}'.format(PREFIX, prediction_mode))
 
-        self.max_threads = 100
-        self.thread_dict = Manager().dict()
-        self.thread_cnt_dict = Manager().dict()
-        self.thread_cnt_dict[0] = 0
+        self.multiprocessing = st.Hyperparameters.DEFAULT_DICT['multiprocessing']
+        if hparams and 'multiprocessing' in hparams.keys():
+            print('{}Use multiprocessing in hparams:{}'.format(PREFIX, hparams['multiprocessing']))
+            self.multiprocessing = hparams['multiprocessing']
+        else:
+            print('{}TODO Use multiprocessing with default value:{}'.format(PREFIX, self.multiprocessing))
+
+        self.max_threads = st.Hyperparameters.DEFAULT_DICT['max_threads']
+        if hparams and 'max_threads' in hparams.keys():
+            print('{}Use max_threads in hparams:{}'.format(PREFIX, hparams['max_threads']))
+            self.max_threads = hparams['max_threads']
+        else:
+            print('{}TODO Use max_threads with default value:{}'.format(PREFIX, self.max_threads))
+
+        print('{}multiprocessing: {}'.format(PREFIX, self.multiprocessing))
+        print('{}cpu_count: {}, max_threads: {}'.format(PREFIX, mp.cpu_count(), self.max_threads))
+        if self.multiprocessing and self.max_threads > 1:
+            self.thread_dict = Manager().dict()
 
         # about mask_rate
         self.mask_rate = None
@@ -417,12 +434,17 @@ class GGDataSet:
         if hparams and 'data_set_def_path' in hparams.keys():
             print('{}Use data_set_def_path in hparams:{}'.format(PREFIX, hparams['data_set_def_path']))
             self.data_set_def_path = hparams['data_set_def_path']
+
+            try:
+                # read df_data_set_def and check
+                self.df_data_set_def = pd.read_csv(self.data_set_def_path)
+                # _debug = self.df_data_set_def['data_set_id']
+            except ValueError as e:
+                print('{}Can not read df_data_set_def with data_set_def_path: {}'.format(PREFIX, self.data_set_def_path))
+                self.df_data_set_def = None
         else:
-            print('{}Error no data_set_def_path'.format(PREFIX))
-            exit(1)
-        # read df_data_set_def and check
-        self.df_data_set_def = pd.read_csv(self.data_set_def_path)
-        # _debug = self.df_data_set_def['data_set_id']
+            print('{}Use data_set_def_path with default value:{}, and df_data_set_def set None'.format(PREFIX, self.data_set_def_path))
+            self.df_data_set_def = None
 
         self.annotation_col_names = None
         if hparams and 'annotation_col_names' in hparams.keys():
@@ -797,30 +819,24 @@ class GGDataSet:
     def set_data_ins_mp(self, data_ins, data_index, data_value):
         thread_id = '{}_{}'.format(data_ins.name, data_index)
         self.thread_dict[thread_id] = thread_id
-        self.thread_cnt_dict[0] = self.thread_cnt_dict[0] + 1
-        if self.thread_cnt_dict[0] % 1000 == 0:
-            print(
-                'multiprocessing finished tread with data_ins.name:{}, data_index:{} starts. thread_dict:{}, thread_cnt:{}'.format(
-                    data_ins.name,
-                    data_index,
-                    len(
-                        self.thread_dict), self.thread_cnt_dict[0]))
 
         data_ins.set(data_index, data_value)
         self.thread_dict.pop(thread_id, None)
 
 
     def set_data_ins(self, data_ins, data_index, data_value):
-        self.max_threads = self.max_threads or 1
 
         # single thread processing
-        if self.max_threads <= 1:
+        if (not self.multiprocessing) or self.max_threads <= 1:
+            print('set_data_ins single thread processing with data_index:{}'.format(data_index))
             return data_ins.set(data_index, data_value)
 
         # multi thread processing
         thread_wait_time = 0.01
-        while len(self.thread_dict) >= self.max_threads:
-            print('multiprocessing waiting for tread with data_ins.name:{}, data_index:{} starts. thread:{}'.format(data_ins.name, data_index, len(self.thread_dict)))
+        working_threads = len(self.thread_dict)
+        while working_threads >= self.max_threads:
+            print('multiprocessing waiting for {}sec for thread with data_ins.name:{}, data_index:{} starts. working_threads:{} / max_threads: {}'.format(
+                thread_wait_time, data_ins.name, data_index, working_threads, self.max_threads))
             time.sleep(thread_wait_time)
             thread_wait_time = min(1.0, thread_wait_time * 2.0)
 
@@ -941,5 +957,3 @@ class GGDataSet:
             yield root
             for file in files:
                 yield os.path.join(root, file)
-
-

@@ -19,23 +19,34 @@ function submit_signin(e) {
 
     // not to post
     e.preventDefault();
-    var formData = $(signin_form).serialize();
-    console.log(formData)
+    // var form_object = $(signin_form);
+    var form_serialized = $(signin_form).serializeArray();
+    console.log('form_serialized: ' + form_serialized)
     // read operation
-    signin(formData);
+    signin(form_to_json(form_serialized));
+}
+
+function form_to_json(form_serialized) {
+    console.log('form_to_json')
+    var json_object = {};
+    form_serialized.forEach((value, key) => {json_object[value.name] = value.value});
+  return json_object;
 }
 
 /*
  * Function to send formData to server using ajax and render its response to HTML
  */
-function signin(formData) {
+function signin(json_object) {
     //$("#operation-body").addClass('loading-spinner');
     console.log('signin')
+    console.log('json_object: ' + JSON.stringify(json_object))
 
     $.ajax({
       type: 'POST',
       url: host_url + '/signin',
-      data: formData
+      data: JSON.stringify(json_object),
+      contentType: 'application/json',
+      dataType: "json"
     })
     .done(function(response) {
         var jwt = response.data.jwt;

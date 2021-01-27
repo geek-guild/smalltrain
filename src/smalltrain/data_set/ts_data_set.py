@@ -10,6 +10,7 @@ import math
 import csv
 import os
 import sys
+import random
 
 from multiprocessing import Process, Manager
 
@@ -152,7 +153,8 @@ class TSDataSet(GGDataSet):
                     try:
                         col_name = add_dt_col_name['col_name']
                         func = add_dt_col_name['func']
-                        print('{}add_dt_col_name_list col_name:{}, func:{}'.format(PREFIX, col_name, func))
+                        args = add_dt_col_name.get('args')
+                        print('{}add_dt_col_name_list col_name:{}, func:{}, args:{}'.format(PREFIX, col_name, func, args))
                     except KeyError:
                         print('{}Error on invalid parameter:{}'.format(PREFIX, add_dt_col_name))
                         exit(1)
@@ -650,8 +652,9 @@ class TSDataSet(GGDataSet):
                         for add_dt_col_name in add_dt_col_name_list:
                             col_name = add_dt_col_name['col_name']
                             func = add_dt_col_name['func']
+                            args = add_dt_col_name.get('args')
                             offset = float(add_dt_col_name['offset']) if 'offset' in add_dt_col_name.keys() else 0.0
-                            print('add_dt_col_name_list col_name:{}, func:{}'.format(col_name, func))
+                            print('add_dt_col_name_list col_name:{}, func:{}, args:{}'.format(col_name, func, args))
 
                             if func.lower() in ['get_year']:
                                 add_dt_list = [(float(d.year) - 2000.0) for d in _dt_list]
@@ -661,10 +664,14 @@ class TSDataSet(GGDataSet):
                             elif func.lower() in ['get_day']:
                                 # add_dt_list = [-0.5 + (float(d.day) / 30.0) for d in _dt_list]
                                 add_dt_list = [float(d.day) - 15.0 for d in _dt_list]
+                            elif func.lower() in ['get_ymd']:
+                                add_dt_list = [float((d.year - 2000) * 1 + d.month * 1e-2 + d.day * 1e-4) for d in _dt_list]
                             elif func.lower() in ['get_hour']:
                                 add_dt_list = [float(d.hour) - 12.0 for d in _dt_list]
                             elif func.lower() in ['get_minute']:
                                 add_dt_list = [float(d.minute) - 30.0 for d in _dt_list]
+                            elif func.lower() in ['get_hm']:
+                                add_dt_list = [float(d.hour * 60 + d.minute - 720.0) for d in _dt_list]
                             elif func.lower() in ['get_target_year']:
                                 # add_dt_list = (float(target_dt.year) - 2000.0) * np.ones(len(_dt_list))
                                 add_dt_list = [(float(d.year) - 2000.0) for d in _target_dt]
@@ -680,7 +687,12 @@ class TSDataSet(GGDataSet):
                                 add_dt_list = [float(d.minute) - 30.0 for d in _target_dt]
                             elif func.lower() in ['get_target_time_stamp_in_day']:
                                 add_dt_list = [float(datetime.timestamp(d) / (60 * 60 * 24)) for d in _target_dt]
-
+                            elif func.lower() in ['const']:
+                                add_dt_list = [args[0]] * len(_dt_list)
+                            elif func.lower() in ['random_choice']:
+                                add_dt_list = [random.choice(args) for d in _dt_list]
+                            else:
+                                raise ValueError('Invalid func: {}'.format(func))
 
                             work_ts_data[col_name] = [x + offset for x in add_dt_list]
 
@@ -903,9 +915,10 @@ class TSDataSet(GGDataSet):
             generate_ts_time += (time.time() - reset_time)
 
         # wait for thread finish
-        while len(self.thread_dict) > 0:
-            print('waiting for thread finish with len:{}'.format(len(self.thread_dict)))
-            time.sleep(1)
+        if self.multiprocessing:
+            while len(self.thread_dict) > 0:
+                print('waiting for thread finish with len:{}'.format(len(self.thread_dict)))
+                time.sleep(1)
 
         # if self.annotation_col_names is not None:
         #     annotation_data = annotation_data[:data_index]

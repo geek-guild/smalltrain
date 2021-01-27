@@ -39,7 +39,9 @@ class OneDimCNNModel(NNModel):
     def __init__(self):
         return
 
-    def construct_model(self, log_dir_path, model_id=None, train_data=None, debug_mode=True, prediction_mode=False, hparams=None):
+    # def construct_model(self, log_dir_path, model_id=None, train_data=None, debug_mode=True, prediction_mode=False, hparams=None):
+    def set_params(self, log_dir_path, model_id=None, train_data=None, debug_mode=True, prediction_mode=False,
+                            hparams=None):
 
         PREFIX = '[OneDimCNNModel]'
         print('{}__init__'.format(PREFIX))
@@ -114,10 +116,15 @@ class OneDimCNNModel(NNModel):
 
         self.train_data = train_data
 
-        try:
-            self.col_size = self.data_set.col_size
-        except AttributeError:
-            self.col_size = None
+        # Set col_size from
+        # 1. hparams.get('col_size')
+        # 2. data_set.col_size
+        self.col_size = hparams.get('col_size')
+        if self.col_size is None:
+            try:
+                self.col_size = self.data_set.col_size
+            except AttributeError:
+                self.col_size = None
 
         # update by hparams
 
@@ -384,32 +391,28 @@ class OneDimCNNModel(NNModel):
             self.output_classes = self.get_output_classes_from_model(self.init_model_path)
             hparams['output_classes'] = self.output_classes
 
-        last_time = time.time()
-        self.auto_set_model_parameter()
-        print('---------- time:{} DONE auto_set_model_parameter'.format(time.time() - last_time))
-        last_time = time.time()
-
         self.log_dir_path = log_dir_path
         self.result_sum = []
 
-        self.sess = tf.InteractiveSession()
-        self.define_model()
-        print('---------- time:{} DONE define_model'.format(time.time() - last_time))
-        last_time = time.time()
-        self.saver = tf.train.Saver(var_list=None, max_to_keep=None)
-        self.global_iter = 0
-        self.sess.run(tf.global_variables_initializer())
-        if self.untrainable_var_name_list is not None:
-            self.trainable_variables = self.remove_trainable(self.untrainable_var_name_list)
-            self.set_optimizer()
-        # restore model
-        if self.init_model_path is not None:
-            print('restore model from {}'.format(self.init_model_path))
-            has_restored = self.restore(self.init_model_path, self.restore_var_name_list)
-            print('has_restored:', has_restored)
-            # if it has not been restored, then the model will be initialized with Prob dist.
-        print('---------- time:{} DONE init model'.format(time.time() - last_time))
-        last_time = time.time()
+        # Move to NNModel.prepare_model
+        # self.sess = tf.InteractiveSession()
+        # self.define_model()
+        # print('---------- time:{} DONE define_model'.format(time.time() - last_time))
+        # last_time = time.time()
+        # self.saver = tf.train.Saver(var_list=None, max_to_keep=None)
+        # self.global_iter = 0
+        # self.sess.run(tf.global_variables_initializer())
+        # if self.untrainable_var_name_list is not None:
+        #     self.trainable_variables = self.remove_trainable(self.untrainable_var_name_list)
+        #     self.set_optimizer()
+        # # restore model
+        # if self.init_model_path is not None:
+        #     print('restore model from {}'.format(self.init_model_path))
+        #     has_restored = self.restore(self.init_model_path, self.restore_var_name_list)
+        #     print('has_restored:', has_restored)
+        #     # if it has not been restored, then the model will be initialized with Prob dist.
+        # print('---------- time:{} DONE init model'.format(time.time() - last_time))
+        # last_time = time.time()
 
         return self
 
@@ -419,10 +422,7 @@ class OneDimCNNModel(NNModel):
 
         self.can_not_generate_input_output_data = None
 
-        self.data_set = TSDataSet(debug_mode=self.debug_mode, prediction_mode=self.prediction_mode, hparams=self.hparams)
-
-        # _input_data, _output_data = self.data_set.generate_input_output_data()
-        self.data_set.generate_input_output_data()
+        self.generate_data_set()
 
         self.input_width = self.data_set.input_ts_width
         self.col_size = self.data_set.col_size
@@ -433,6 +433,9 @@ class OneDimCNNModel(NNModel):
         print('DONE auto_set_model_parameter')
         return True
 
+    def generate_data_set(self):
+        self.data_set = TSDataSet(debug_mode=self.debug_mode, prediction_mode=self.prediction_mode, hparams=self.hparams)
+        self.data_set.generate_input_output_data()
 
     def get_output_classes_from_model(self, init_model_path):
         from smalltrain.model.operation import is_s3_path, download_to_local, upload_to_cloud
