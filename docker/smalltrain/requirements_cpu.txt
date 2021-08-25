@@ -14,7 +14,7 @@ six==1.12.0
 redis==3.0.1
 redis-py-cluster==2.0.0
 tensorboard==1.14.0
-tensorflow==1.14.0
+tensorflow==2.5.1
 tensorflow-estimator==1.14.0
 tensorflow-gpu==1.14.0
 
