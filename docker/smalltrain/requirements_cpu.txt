@@ -2,7 +2,7 @@ awscli==1.16.313
 boto3==1.10.49
 jupyterlab>=1.0.0,<1.1.0
 matplotlib==3.0.3
-numpy==1.17.3
+numpy==1.22.0
 opencv-python>=4.4.0.0,<4.5.0.0
 pandas==0.24.2
 pickleshare==0.7.5
