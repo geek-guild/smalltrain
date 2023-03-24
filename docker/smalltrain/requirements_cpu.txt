@@ -16,5 +16,5 @@ redis-py-cluster==2.0.0
 tensorboard==1.14.0
 tensorflow==1.14.0
 tensorflow-estimator==1.14.0
-tensorflow-gpu==1.14.0
+tensorflow-gpu==2.12.0
 
