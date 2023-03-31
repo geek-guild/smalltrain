@@ -11,7 +11,7 @@ python-dateutil==2.8.0
 requests==2.22.0
 scipy==1.3.1
 six==1.12.0
-redis==3.0.1
+redis==4.4.4
 redis-py-cluster==2.0.0
 tensorboard==1.14.0
 tensorflow==1.14.0
